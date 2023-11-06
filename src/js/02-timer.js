@@ -2,10 +2,9 @@ import flatpickr from 'flatpickr';
 import 'flatpickr/dist/flatpickr.min.css';
 
 import { Notify } from 'notiflix/build/notiflix-notify-aio';
-import { Report } from 'notiflix/build/notiflix-report-aio';
 
 const refs = {
-  timePicker: document.querySelector('#datetime-picker'),
+  datetimePickerInput: document.querySelector('#datetime-picker'),
   startBtn: document.querySelector('button[data-start]'),
   timer: document.querySelector('timer'),
   days: document.querySelector('[data-days]'),
@@ -16,6 +15,8 @@ const refs = {
 
 refs.startBtn.setAttribute('disabled', true);
 
+let timeFromDate = null;
+
 const options = {
   enableTime: true,
   time_24hr: true,
@@ -23,11 +24,13 @@ const options = {
   minuteIncrement: 1,
   onClose(selectedDates) {
 
-    if(selectedDates[0] < Date.now()) {
-      return Notify.failure("Please select future date");
+    timeFromDate = selectedDates[0].getTime()
+
+    if(timeFromDate < Date.now()) {
+      return Notify.failure("Please select a future date");
     }
 
-    Report.success('Date is valid, click to Start button');
+    Notify.success('Date is valid, click the Start button');
     refs.startBtn.removeAttribute('disabled');
   },
 };
@@ -39,22 +42,27 @@ class Timer {
     this.onShow = onShow;
     this.intervalId = null;
     this.delay = 1000;
-    // this.init();
-  }
-
-
-  init() {
-
   }
 
   start() {
     this.intervalId = setInterval(() => {
-      
-    })
+      if(timeFromDate - Date.now() <= 0 ){
+        clearInterval(this.intervalId);
+        this.enableInputFields();
+        return Notify.success('We start the sale!');
+      }
+
+      const deltaTime = timeFromDate - Date.now();
+      const time = this.convertMs(deltaTime);
+      this.onShow(time);
+    }, this.delay);
+
+    this.disableStartButton();
+    this.disableTimePickerInput();
   }
 
   stop() {
-
+    clearInterval(this.intervalId);
   }
 
   convertMs(ms) {
@@ -74,13 +82,25 @@ class Timer {
     addLeadingZero (value) {
       return String(value).padStart(2, '0');
     };
+
+    enableInputFields() {
+      refs.datetimePickerInput.removeAttribute('disabled');
+    }
+
+    disableStartButton() {
+      refs.startBtn.setAttribute('disabled', 'disabled');
+    }
+
+    disableTimePickerInput() {
+      refs.datetimePickerInput.setAttribute('disabled', 'disabled');
+    }
 }
 
 const timer = new Timer({
   onShow: updateTimerInterface,
 });
 
-// refs.buttonStart.addEventListener('click', timer.start.bind(timer));
+refs.startBtn.addEventListener('click', timer.start.bind(timer));
 
 function updateTimerInterface({ days, hours, minutes, seconds }) {
   refs.days.textContent = `${days}`;
